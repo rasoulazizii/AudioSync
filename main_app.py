@@ -1,20 +1,18 @@
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import threading
 import audio_engine 
 import gui_plots
+import audio_player
 
 class AudioSyncApp:
     def __init__(self, root):
         self.root = root
         self.root.title("AudioSyncPro")
-        self.root.geometry("600x450")
+        self.root.geometry("700x650")  # Increased height for plot
 
-        # Plot Frame (Placeholder for the graph)
-        self.plot_area = tk.Frame(root, bg="white", height=200)
-        self.plot_area.pack(fill="both", expand=True, padx=20, pady=10)
-        
-        # Variables to store file paths and data
+        # Variables
         self.file1_path = ""
         self.file2_path = ""
         self.audio1_data = None
@@ -45,18 +43,32 @@ class AudioSyncApp:
 
         # Analyze Button
         self.btn_analyze = tk.Button(root, text="Start Smart Analysis", command=self.start_analysis_thread, bg="#dddddd", font=("Arial", 11))
-        self.btn_analyze.pack(pady=20, ipadx=20, ipady=5)
+        self.btn_analyze.pack(pady=15, ipadx=20, ipady=5)
 
-        # Status Label (Loading...)
+        # Status Label
         self.lbl_status = tk.Label(root, text="Ready", fg="blue")
         self.lbl_status.pack(pady=5)
 
+        # Control Buttons Frame (Play/Stop)
+        btn_frame = tk.Frame(root)
+        btn_frame.pack(pady=5)
+        
+        self.btn_play = tk.Button(btn_frame, text="▶ Play Synced Audio", command=self.play_synced, bg="#c8e6c9", width=20)
+        self.btn_play.pack(side="left", padx=5)
+        
+        self.btn_stop = tk.Button(btn_frame, text="⏹ Stop", command=self.stop_playback, bg="#ffcdd2", width=10)
+        self.btn_stop.pack(side="left", padx=5)
+
         # Results Area
         self.result_frame = tk.LabelFrame(root, text="Analysis Results", padx=10, pady=10)
-        self.result_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        self.result_frame.pack(fill="x", padx=20, pady=10)
         
         self.lbl_result_text = tk.Label(self.result_frame, text="Waiting for analysis...", font=("Arial", 12))
         self.lbl_result_text.pack()
+
+        # Plot Frame (MOVED HERE: Bottom of the UI)
+        self.plot_area = tk.Frame(root, bg="white", height=250)
+        self.plot_area.pack(fill="both", expand=True, padx=20, pady=10)
 
         # Check FFmpeg on startup
         if not audio_engine.check_ffmpeg():
@@ -75,27 +87,24 @@ class AudioSyncApp:
             self.lbl_file2.config(text=os.path.basename(path), fg="black")
 
     def start_analysis_thread(self):
-        """Start analysis in a background thread to keep UI active."""
+        """Start analysis in a background thread."""
         if not self.file1_path or not self.file2_path:
             messagebox.showwarning("Warning", "Please select both files first.")
             return
 
-        # Disable button during process
         self.btn_analyze.config(state="disabled")
         self.lbl_status.config(text="Processing... (This may take time)")
         
-        # Start Thread
         t = threading.Thread(target=self.run_analysis_logic)
         t.start()
 
     def run_analysis_logic(self):
         """The heavy logic running in background."""
         try:
-            # 1. Load Audio using our engine
+            # 1. Load Audio
             y1, sr = audio_engine.load_audio_data(self.file1_path)
             y2, sr = audio_engine.load_audio_data(self.file2_path)
             
-            # Store data for later use (plotting/playing)
             self.audio1_data = y1
             self.audio2_data = y2
 
@@ -103,25 +112,39 @@ class AudioSyncApp:
             offset, score = audio_engine.find_best_offset(y1, y2)
             self.calculated_offset = offset
 
-            # We use root.after to safely update GUI from a thread
-            self.root.after(0, lambda: gui_plots.draw_comparison_plot(
-                self.plot_area, y1, y2, sr, offset
-            ))
-
-            # 3. Update UI (must be done in main thread usually, but simple config is safe here mostly)
-            # For 100% safety we use root.after, but let's keep it simple for now.
-            res_text = f"Offset Found: {offset:.3f} seconds\nConfidence Score: {score:.1f}"
-            self.lbl_result_text.config(text=res_text, fg="green")
-            self.lbl_status.config(text="Analysis Complete.")
+            # 3. Update UI Safely (Using root.after)
+            self.root.after(0, lambda: self.update_ui_results(y1, y2, sr, offset, score))
 
         except Exception as e:
-            self.lbl_status.config(text="Error occurred.")
             print(e)
+            self.root.after(0, lambda: self.lbl_status.config(text="Error occurred."))
         finally:
-            # Re-enable button
-            self.btn_analyze.config(state="normal")
+            self.root.after(0, lambda: self.btn_analyze.config(state="normal"))
 
-import os
+    def update_ui_results(self, y1, y2, sr, offset, score):
+        """Helper to update UI from main thread"""
+        # Draw Plot
+        gui_plots.draw_comparison_plot(self.plot_area, y1, y2, sr, offset)
+        
+        # Update Labels
+        res_text = f"Offset Found: {offset:.3f} seconds\nConfidence Score: {score:.1f}"
+        self.lbl_result_text.config(text=res_text, fg="green")
+        self.lbl_status.config(text="Analysis Complete.")
+
+    def play_synced(self):
+        if self.audio1_data is None or self.audio2_data is None:
+            messagebox.showwarning("Warning", "Please analyze files first.")
+            return
+            
+        audio_player.mix_and_play(
+            self.audio1_data, 
+            self.audio2_data, 
+            16000, 
+            self.calculated_offset
+        )
+
+    def stop_playback(self):
+        audio_player.stop_audio()
 
 if __name__ == "__main__":
     root = tk.Tk()
