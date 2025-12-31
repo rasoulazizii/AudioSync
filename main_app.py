@@ -2,12 +2,17 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import threading
 import audio_engine 
+import gui_plots
 
 class AudioSyncApp:
     def __init__(self, root):
         self.root = root
         self.root.title("AudioSyncPro")
         self.root.geometry("600x450")
+
+        # Plot Frame (Placeholder for the graph)
+        self.plot_area = tk.Frame(root, bg="white", height=200)
+        self.plot_area.pack(fill="both", expand=True, padx=20, pady=10)
         
         # Variables to store file paths and data
         self.file1_path = ""
@@ -97,6 +102,11 @@ class AudioSyncApp:
             # 2. Find Offset
             offset, score = audio_engine.find_best_offset(y1, y2)
             self.calculated_offset = offset
+
+            # We use root.after to safely update GUI from a thread
+            self.root.after(0, lambda: gui_plots.draw_comparison_plot(
+                self.plot_area, y1, y2, sr, offset
+            ))
 
             # 3. Update UI (must be done in main thread usually, but simple config is safe here mostly)
             # For 100% safety we use root.after, but let's keep it simple for now.
