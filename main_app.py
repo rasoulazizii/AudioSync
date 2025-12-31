@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox
 import threading
 import audio_engine 
 import gui_plots
@@ -10,7 +10,7 @@ class AudioSyncApp:
     def __init__(self, root):
         self.root = root
         self.root.title("AudioSyncPro")
-        self.root.geometry("700x650")  # Increased height for plot
+        self.root.geometry("700x700")
 
         # Variables
         self.file1_path = ""
@@ -49,15 +49,18 @@ class AudioSyncApp:
         self.lbl_status = tk.Label(root, text="Ready", fg="blue")
         self.lbl_status.pack(pady=5)
 
-        # Control Buttons Frame (Play/Stop)
+        # Control Buttons Frame (Play / Stop / Save)
         btn_frame = tk.Frame(root)
         btn_frame.pack(pady=5)
         
-        self.btn_play = tk.Button(btn_frame, text="▶ Play Synced Audio", command=self.play_synced, bg="#c8e6c9", width=20)
+        self.btn_play = tk.Button(btn_frame, text="▶ Play Synced", command=self.play_synced, bg="#c8e6c9", width=15)
         self.btn_play.pack(side="left", padx=5)
         
         self.btn_stop = tk.Button(btn_frame, text="⏹ Stop", command=self.stop_playback, bg="#ffcdd2", width=10)
         self.btn_stop.pack(side="left", padx=5)
+
+        self.btn_save = tk.Button(btn_frame, text="💾 Save Output", command=self.save_output, bg="#fff9c4", width=15)
+        self.btn_save.pack(side="left", padx=5)
 
         # Results Area
         self.result_frame = tk.LabelFrame(root, text="Analysis Results", padx=10, pady=10)
@@ -66,7 +69,7 @@ class AudioSyncApp:
         self.lbl_result_text = tk.Label(self.result_frame, text="Waiting for analysis...", font=("Arial", 12))
         self.lbl_result_text.pack()
 
-        # Plot Frame (MOVED HERE: Bottom of the UI)
+        # Plot Frame (Bottom)
         self.plot_area = tk.Frame(root, bg="white", height=250)
         self.plot_area.pack(fill="both", expand=True, padx=20, pady=10)
 
@@ -87,7 +90,6 @@ class AudioSyncApp:
             self.lbl_file2.config(text=os.path.basename(path), fg="black")
 
     def start_analysis_thread(self):
-        """Start analysis in a background thread."""
         if not self.file1_path or not self.file2_path:
             messagebox.showwarning("Warning", "Please select both files first.")
             return
@@ -99,7 +101,6 @@ class AudioSyncApp:
         t.start()
 
     def run_analysis_logic(self):
-        """The heavy logic running in background."""
         try:
             # 1. Load Audio
             y1, sr = audio_engine.load_audio_data(self.file1_path)
@@ -112,7 +113,7 @@ class AudioSyncApp:
             offset, score = audio_engine.find_best_offset(y1, y2)
             self.calculated_offset = offset
 
-            # 3. Update UI Safely (Using root.after)
+            # 3. Update UI Safely
             self.root.after(0, lambda: self.update_ui_results(y1, y2, sr, offset, score))
 
         except Exception as e:
@@ -122,7 +123,6 @@ class AudioSyncApp:
             self.root.after(0, lambda: self.btn_analyze.config(state="normal"))
 
     def update_ui_results(self, y1, y2, sr, offset, score):
-        """Helper to update UI from main thread"""
         # Draw Plot
         gui_plots.draw_comparison_plot(self.plot_area, y1, y2, sr, offset)
         
@@ -132,19 +132,37 @@ class AudioSyncApp:
         self.lbl_status.config(text="Analysis Complete.")
 
     def play_synced(self):
-        if self.audio1_data is None or self.audio2_data is None:
+        if self.audio1_data is None:
             messagebox.showwarning("Warning", "Please analyze files first.")
             return
-            
-        audio_player.mix_and_play(
-            self.audio1_data, 
-            self.audio2_data, 
-            16000, 
-            self.calculated_offset
-        )
+        audio_player.mix_and_play(self.audio1_data, self.audio2_data, 16000, self.calculated_offset)
 
     def stop_playback(self):
         audio_player.stop_audio()
+
+    def save_output(self):
+        if self.audio1_data is None:
+            messagebox.showwarning("Warning", "Nothing to save. Analyze first.")
+            return
+            
+        save_path = filedialog.asksaveasfilename(
+            defaultextension=".wav", filetypes=[("WAV files", "*.wav")], title="Save Synced Audio"
+        )
+        if not save_path: return
+            
+        try:
+            self.lbl_status.config(text="Saving file...")
+            self.root.update()
+            
+            audio_engine.save_synced_audio(
+                self.audio1_data, self.audio2_data, 16000, self.calculated_offset, save_path
+            )
+            
+            messagebox.showinfo("Success", f"File saved!\n{save_path}")
+            self.lbl_status.config(text="File Saved.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Save failed:\n{e}")
+            self.lbl_status.config(text="Save failed.")
 
 if __name__ == "__main__":
     root = tk.Tk()
