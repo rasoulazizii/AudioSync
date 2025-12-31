@@ -1,0 +1,109 @@
+# =========================
+# Python bytecode & cache
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# =========================
+# Python packaging
+# =========================
+*.egg-info/
+.eggs/
+dist/
+build/
+pip-wheel-metadata/
+
+# =========================
+# Jupyter / IPython
+# =========================
+.ipynb_checkpoints/
+.profile_default/
+ipython_config.py
+
+# =========================
+# OS / Editor files
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Temporary audio / video files (THIS PROJECT)
+# =========================
+.__temp_audio.wav
+temp_audio.wav
+*.tmp.wav
+
+# =========================
+# Generated analysis outputs
+# =========================
+outputs/
+results/
+plots/
+reports/
+
+*.png
+*.jpg
+*.jpeg
+*.pdf
+
+# =========================
+# Audio / Video inputs (usually large, keep local)
+# =========================
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+
+# =========================
+# ffmpeg leftovers
+# =========================
+ffmpeg*.log
+
+# =========================
+# Executables (PyInstaller)
+# =========================
+*.exe
+*.spec
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+
+# =========================
+# Test / experiment files
+# =========================
+test_*.py
+experiment_*.py
+scratch_*.py
