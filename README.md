@@ -1,8 +1,4 @@
-code
-Markdown
-download
-content_copy
-expand_less
+
 
 # AudioSync
 
@@ -86,11 +82,5 @@ Alignment: Shifts the second signal by the calculated offset (adding silence pad
 📄 License
 
 This project is open-source and available for educational and personal use.
-
-code
-Code
-download
-content_copy
-expand_less
 
 ```
